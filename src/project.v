@@ -1,42 +1,44 @@
-import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+# Makefile
+# See https://cocotb.org for more info
 
+# defaults
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+SRC_DIR = $(PWD)/../src
+PROJECT_SOURCES = project.v
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+ifneq ($(GATES),yes)
 
-    clock = Clock(dut.clk, 10, units="us")
-    cocotb.start_soon(clock.start())
+# RTL simulation:
+SIM_BUILD				= sim_build/rtl
+VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 
-    # Reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
+else
 
-    assert dut.uo_out.value == 0
+# Gate level simulation:
+SIM_BUILD				= sim_build/gl
+COMPILE_ARGS    += -DGL_TEST
+COMPILE_ARGS    += -DFUNCTIONAL
+COMPILE_ARGS    += -DUSE_POWER_PINS
+COMPILE_ARGS    += -DSIM
+COMPILE_ARGS    += -DUNIT_DELAY=\#1
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
 
-    # Test 1: x0=1, x1=1 (0x11) and w0=1, w1=1 (0x11) -> 4 lanes * 1 = 4
-    dut.ui_in.value = 0x11
-    dut.uio_in.value = 0x11
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 4
+# this gets copied in by the GDS action workflow
+VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
-    # Test 2: Accumulate one more cycle -> 4 + 4 = 8
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 8
+endif
 
-    # Test 3: Negative weights w0=-2, w1=-2 (0xEE) -> 4 lanes * (1 * -2) = -8 -> acc = 0
-    dut.uio_in.value = 0xEE
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0
+# Allow sharing configuration between design and testbench via `include`
+COMPILE_ARGS 		+= -I$(SRC_DIR)
 
-    # Test 4: One more negative cycle -> acc = -8, ReLU clamps to 0
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0
+# Include the testbench sources:
+VERILOG_SOURCES += $(PWD)/tb.v
+TOPLEVEL = tb
+
+# MODULE is the basename of the Python test file
+MODULE = test
+
+# include cocotb's make rules to take care of the simulator rules
+include $(shell cocotb-config --makefiles)/Makefile.sim
