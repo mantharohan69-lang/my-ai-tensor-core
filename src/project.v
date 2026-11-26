@@ -1,6 +1,11 @@
+/*
+ * Copyright (c) 2026 Your Name
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 `default_nettype none
 
-module tt_um_example (
+module tt_um_tensor_core (
     input  wire [7:0] ui_in,    // [3:0] = x0, [7:4] = x1
     output wire [7:0] uo_out,   // Lower 8 bits of ReLU output
     input  wire [7:0] uio_in,   // [3:0] = w0, [7:4] = w1
@@ -46,6 +51,7 @@ module tensor_core_4x (
     output reg  signed [19:0] acc,
     output wire signed [19:0] relu_out
 );
+
     wire signed [15:0] p0 = x0 * w0;
     wire signed [15:0] p1 = x1 * w1;
     wire signed [15:0] p2 = x2 * w2;
@@ -61,4 +67,5 @@ module tensor_core_4x (
     end
 
     assign relu_out = (acc < 0) ? 20'sd0 : acc;
+
 endmodule
