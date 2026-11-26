@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Your Name
+ * Copyright (c) 2026 mantharohan69-lang
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -19,11 +19,11 @@ module tt_um_tensor_core (
     assign uio_out = 8'b0;
     assign uio_oe  = 8'b0;
 
-    // Sign-extend 4-bit inputs/weights from chip pins into 8-bit Tensor Core lanes
-    wire signed [7:0] x0 = {{4{ui_in[3]}},  ui_in[3:0]};
-    wire signed [7:0] x1 = {{4{ui_in[7]}},  ui_in[7:4]};
-    wire signed [7:0] w0 = {{4{uio_in[3]}}, uio_in[3:0]};
-    wire signed [7:0] w1 = {{4{uio_in[7]}}, uio_in[7:4]};
+    // Clean 4-bit to 8-bit signed extension
+    wire signed [7:0] x0 = $signed(ui_in[3:0]);
+    wire signed [7:0] x1 = $signed(ui_in[7:4]);
+    wire signed [7:0] w0 = $signed(uio_in[3:0]);
+    wire signed [7:0] w1 = $signed(uio_in[7:4]);
 
     wire signed [19:0] acc;
     wire signed [19:0] relu_out;
