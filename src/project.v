@@ -1,47 +1,71 @@
-project:
-  title:        "4-Lane Signed Tensor Core"
-  author:       "mantharohan69-lang"
-  discord:      ""
-  description:  "4-lane signed INT4/INT8 multiply-accumulate tensor core with ReLU activation"
-  language:     "Verilog"
-  clock_hz:     0
+/*
+ * Copyright (c) 2026 Your Name
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-  tiles: "1x1"
+`default_nettype none
 
-  top_module:  "tt_um_tensor_core"
+module tt_um_tensor_core (
+    input  wire [7:0] ui_in,    // [3:0] = x0, [7:4] = x1
+    output wire [7:0] uo_out,   // Lower 8 bits of ReLU output
+    input  wire [7:0] uio_in,   // [3:0] = w0, [7:4] = w1
+    output wire [7:0] uio_out,  // Unused
+    output wire [7:0] uio_oe,   // 0 = input mode
+    input  wire       ena,      // Always 1 when powered
+    input  wire       clk,      // Clock
+    input  wire       rst_n     // Active-low reset
+);
 
-  source_files:
-    - "project.v"
+    assign uio_out = 8'b0;
+    assign uio_oe  = 8'b0;
 
-pinout:
-  # Inputs
-  ui[0]: "x0[0]"
-  ui[1]: "x0[1]"
-  ui[2]: "x0[2]"
-  ui[3]: "x0[3]"
-  ui[4]: "x1[0]"
-  ui[5]: "x1[1]"
-  ui[6]: "x1[2]"
-  ui[7]: "x1[3]"
+    // Sign-extend 4-bit inputs/weights from chip pins into 8-bit Tensor Core lanes
+    wire signed [7:0] x0 = {{4{ui_in[3]}},  ui_in[3:0]};
+    wire signed [7:0] x1 = {{4{ui_in[7]}},  ui_in[7:4]};
+    wire signed [7:0] w0 = {{4{uio_in[3]}}, uio_in[3:0]};
+    wire signed [7:0] w1 = {{4{uio_in[7]}}, uio_in[7:4]};
 
-  # Outputs
-  uo[0]: "relu_out[0]"
-  uo[1]: "relu_out[1]"
-  uo[2]: "relu_out[2]"
-  uo[3]: "relu_out[3]"
-  uo[4]: "relu_out[4]"
-  uo[5]: "relu_out[5]"
-  uo[6]: "relu_out[6]"
-  uo[7]: "relu_out[7]"
+    wire signed [19:0] acc;
+    wire signed [19:0] relu_out;
 
-  # Bidirectional pins
-  uio[0]: "w0[0]"
-  uio[1]: "w0[1]"
-  uio[2]: "w0[2]"
-  uio[3]: "w0[3]"
-  uio[4]: "w1[0]"
-  uio[5]: "w1[1]"
-  uio[6]: "w1[2]"
-  uio[7]: "w1[3]"
+    tensor_core_4x core (
+        .clk(clk),
+        .rst(~rst_n),
+        .x0(x0), .x1(x1), .x2(x0), .x3(x1),
+        .w0(w0), .w1(w1), .w2(w0), .w3(w1),
+        .acc(acc),
+        .relu_out(relu_out)
+    );
 
-yaml_version: 6
+    assign uo_out = relu_out[7:0];
+
+    wire _unused = &{ena, acc, relu_out[19:8], 1'b0};
+
+endmodule
+
+module tensor_core_4x (
+    input  wire               clk,
+    input  wire               rst,
+    input  wire signed [7:0]  x0, x1, x2, x3,
+    input  wire signed [7:0]  w0, w1, w2, w3,
+    output reg  signed [19:0] acc,
+    output wire signed [19:0] relu_out
+);
+
+    wire signed [15:0] p0 = x0 * w0;
+    wire signed [15:0] p1 = x1 * w1;
+    wire signed [15:0] p2 = x2 * w2;
+    wire signed [15:0] p3 = x3 * w3;
+
+    wire signed [17:0] lane_sum = p0 + p1 + p2 + p3;
+
+    always @(posedge clk) begin
+        if (rst)
+            acc <= 20'sd0;
+        else
+            acc <= acc + lane_sum;
+    end
+
+    assign relu_out = (acc < 0) ? 20'sd0 : acc;
+
+endmodule
