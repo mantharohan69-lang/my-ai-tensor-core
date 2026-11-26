@@ -1,44 +1,47 @@
-# Makefile
-# See https://cocotb.org for more info
+project:
+  title:        "4-Lane Signed Tensor Core"
+  author:       "mantharohan69-lang"
+  discord:      ""
+  description:  "4-lane signed INT4/INT8 multiply-accumulate tensor core with ReLU activation"
+  language:     "Verilog"
+  clock_hz:     0
 
-# defaults
-SIM ?= icarus
-TOPLEVEL_LANG ?= verilog
-SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+  tiles: "1x1"
 
-ifneq ($(GATES),yes)
+  top_module:  "tt_um_tensor_core"
 
-# RTL simulation:
-SIM_BUILD				= sim_build/rtl
-VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+  source_files:
+    - "project.v"
 
-else
+pinout:
+  # Inputs
+  ui[0]: "x0[0]"
+  ui[1]: "x0[1]"
+  ui[2]: "x0[2]"
+  ui[3]: "x0[3]"
+  ui[4]: "x1[0]"
+  ui[5]: "x1[1]"
+  ui[6]: "x1[2]"
+  ui[7]: "x1[3]"
 
-# Gate level simulation:
-SIM_BUILD				= sim_build/gl
-COMPILE_ARGS    += -DGL_TEST
-COMPILE_ARGS    += -DFUNCTIONAL
-COMPILE_ARGS    += -DUSE_POWER_PINS
-COMPILE_ARGS    += -DSIM
-COMPILE_ARGS    += -DUNIT_DELAY=\#1
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
+  # Outputs
+  uo[0]: "relu_out[0]"
+  uo[1]: "relu_out[1]"
+  uo[2]: "relu_out[2]"
+  uo[3]: "relu_out[3]"
+  uo[4]: "relu_out[4]"
+  uo[5]: "relu_out[5]"
+  uo[6]: "relu_out[6]"
+  uo[7]: "relu_out[7]"
 
-# this gets copied in by the GDS action workflow
-VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
+  # Bidirectional pins
+  uio[0]: "w0[0]"
+  uio[1]: "w0[1]"
+  uio[2]: "w0[2]"
+  uio[3]: "w0[3]"
+  uio[4]: "w1[0]"
+  uio[5]: "w1[1]"
+  uio[6]: "w1[2]"
+  uio[7]: "w1[3]"
 
-endif
-
-# Allow sharing configuration between design and testbench via `include`
-COMPILE_ARGS 		+= -I$(SRC_DIR)
-
-# Include the testbench sources:
-VERILOG_SOURCES += $(PWD)/tb.v
-TOPLEVEL = tb
-
-# MODULE is the basename of the Python test file
-MODULE = test
-
-# include cocotb's make rules to take care of the simulator rules
-include $(shell cocotb-config --makefiles)/Makefile.sim
+yaml_version: 6
