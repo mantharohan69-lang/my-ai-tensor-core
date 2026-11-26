@@ -1,46 +1,43 @@
-# SPDX-FileCopyrightText: © 2026 mantharohan69-lang
-# SPDX-License-Identifier: Apache-2.0
+# Makefile
+# See https://docs.cocotb.org/en/stable/quickstart.html for more info
 
-import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+# defaults
+SIM ?= icarus
+FST ?= -fst # Use more efficient FST format
+TOPLEVEL_LANG ?= verilog
+SRC_DIR = $(PWD)/../src
+PROJECT_SOURCES = project.v
 
+ifneq ($(GATES),yes)
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+# RTL simulation:
+SIM_BUILD				= sim_build/rtl
+VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 
-    # cocotb 2.0.0 uses unit="us" (singular)
-    clock = Clock(dut.clk, 10, unit="us")
-    cocotb.start_soon(clock.start())
+else
 
-    # Reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
+# Gate level simulation:
+SIM_BUILD				= sim_build/gl
+COMPILE_ARGS    += -DGL_TEST
+COMPILE_ARGS    += -DFUNCTIONAL
+COMPILE_ARGS    += -DSIM
+VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_io/verilog/sg13g2_io.v
+VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_stdcell/verilog/sg13g2_stdcell.v
 
-    assert dut.uo_out.value == 0
+# this gets copied in by the GDS action workflow
+VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
-    # Test 1: x0=1, x1=1 (0x11) and w0=1, w1=1 (0x11) -> 4 lanes * 1 = 4
-    dut.ui_in.value = 0x11
-    dut.uio_in.value = 0x11
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 4
+endif
 
-    # Test 2: Accumulate one more cycle -> 4 + 4 = 8
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 8
+# Allow sharing configuration between design and testbench via `include`:
+COMPILE_ARGS 		+= -I$(SRC_DIR)
 
-    # Test 3: Negative weights w0=-2, w1=-2 (0xEE) -> 4 lanes * (1 * -2) = -8 -> acc = 0
-    dut.uio_in.value = 0xEE
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0
+# Include the testbench sources:
+VERILOG_SOURCES += $(PWD)/tb.v
+TOPLEVEL = tb
 
-    # Test 4: One more negative cycle -> acc = -8, ReLU clamps to 0
-    await ClockCycles(dut.clk, 1)
-    assert dut.uo_out.value == 0
+# List test modules to run, separated by commas and without the .py suffix:
+COCOTB_TEST_MODULES = test
+
+# include cocotb's make rules to take care of the simulator setup
+include $(shell cocotb-config --makefiles)/Makefile.sim
