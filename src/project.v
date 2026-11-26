@@ -1,41 +1,42 @@
-`default_nettype none
-`timescale 1ns / 1ps
+import cocotb
+from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles
 
-module tb ();
 
-  initial begin
-    $dumpfile("tb.fst");
-    $dumpvars(0, tb);
-    #1;
-  end
+@cocotb.test()
+async def test_project(dut):
+    dut._log.info("Start")
 
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
+    clock = Clock(dut.clk, 10, units="us")
+    cocotb.start_soon(clock.start())
 
-`ifdef GL_TEST
-  wire VPWR = 1'b1;
-  wire VGND = 1'b0;
-`endif
+    # Reset
+    dut._log.info("Reset")
+    dut.ena.value = 1
+    dut.ui_in.value = 0
+    dut.uio_in.value = 0
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 10)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 1)
 
-  tt_um_tensor_core user_project (
-`ifdef GL_TEST
-      .VPWR(VPWR),
-      .VGND(VGND),
-`endif
-      .ui_in  (ui_in),
-      .uo_out (uo_out),
-      .uio_in (uio_in),
-      .uio_out(uio_out),
-      .uio_oe (uio_oe),
-      .ena    (ena),
-      .clk    (clk),
-      .rst_n  (rst_n)
-  );
+    assert dut.uo_out.value == 0
 
-endmodule
+    # Test 1: x0=1, x1=1 (0x11) and w0=1, w1=1 (0x11) -> 4 lanes * 1 = 4
+    dut.ui_in.value = 0x11
+    dut.uio_in.value = 0x11
+    await ClockCycles(dut.clk, 1)
+    assert dut.uo_out.value == 4
+
+    # Test 2: Accumulate one more cycle -> 4 + 4 = 8
+    await ClockCycles(dut.clk, 1)
+    assert dut.uo_out.value == 8
+
+    # Test 3: Negative weights w0=-2, w1=-2 (0xEE) -> 4 lanes * (1 * -2) = -8 -> acc = 0
+    dut.uio_in.value = 0xEE
+    await ClockCycles(dut.clk, 1)
+    assert dut.uo_out.value == 0
+
+    # Test 4: One more negative cycle -> acc = -8, ReLU clamps to 0
+    await ClockCycles(dut.clk, 1)
+    assert dut.uo_out.value == 0
