@@ -16,34 +16,34 @@ project:
 
 pinout:
   # Inputs
-  "ui[0]": "x0_0"
-  "ui[1]": "x0_1"
-  "ui[2]": "x0_2"
-  "ui[3]": "x0_3"
-  "ui[4]": "x1_0"
-  "ui[5]": "x1_1"
-  "ui[6]": "x1_2"
-  "ui[7]": "x1_3"
+  "ui\u005B0\u005D": "x0[0]"
+  "ui\u005B1\u005D": "x0[1]"
+  "ui\u005B2\u005D": "x0[2]"
+  "ui\u005B3\u005D": "x0[3]"
+  "ui\u005B4\u005D": "x1[0]"
+  "ui\u005B5\u005D": "x1[1]"
+  "ui\u005B6\u005D": "x1[2]"
+  "ui\u005B7\u005D": "x1[3]"
 
   # Outputs
-  "uo[0]": "relu_0"
-  "uo[1]": "relu_1"
-  "uo[2]": "relu_2"
-  "uo[3]": "relu_3"
-  "uo[4]": "relu_4"
-  "uo[5]": "relu_5"
-  "uo[6]": "relu_6"
-  "uo[7]": "relu_7"
+  "uo\u005B0\u005D": "relu_out[0]"
+  "uo\u005B1\u005D": "relu_out[1]"
+  "uo\u005B2\u005D": "relu_out[2]"
+  "uo\u005B3\u005D": "relu_out[3]"
+  "uo\u005B4\u005D": "relu_out[4]"
+  "uo\u005B5\u005D": "relu_out[5]"
+  "uo\u005B6\u005D": "relu_out[6]"
+  "uo\u005B7\u005D": "relu_out[7]"
 
   # Bidirectional pins
-  "uio[0]": "w0_0"
-  "uio[1]": "w0_1"
-  "uio[2]": "w0_2"
-  "uio[3]": "w0_3"
-  "uio[4]": "w1_0"
-  "uio[5]": "w1_1"
-  "uio[6]": "w1_2"
-  "uio[7]": "w1_3"
+  "uio\u005B0\u005D": "w0[0]"
+  "uio\u005B1\u005D": "w0[1]"
+  "uio\u005B2\u005D": "w0[2]"
+  "uio\u005B3\u005D": "w0[3]"
+  "uio\u005B4\u005D": "w1[0]"
+  "uio\u005B5\u005D": "w1[1]"
+  "uio\u005B6\u005D": "w1[2]"
+  "uio\u005B7\u005D": "w1[3]"
 
 # Do not change!
 yaml_version: 6
